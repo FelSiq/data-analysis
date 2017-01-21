@@ -1,5 +1,14 @@
 #Data free avaliable on 'http://www.dcc.fc.up.pt/~ltorgo/DataMiningWithR/datasets.html'
 #The training data is in 'Analysis.txt' file.
+#All code atributed to:
+#	Data Mining with R:	learning by case studies
+#	Luis Torgo
+#	LIACC-FEP, University of Porto
+#	R. Campo Alegre, 823 - 4150 Porto, Portugal
+#	email: ltorgo@liacc.up.pt
+#	http://www.liacc.up.pt/∼ltorgo
+#	August 10, 2005
+#
 
 algae.train <- read.table('./data/Analysis.txt',
 	header=FALSE,
@@ -122,6 +131,7 @@ anova(lm.a1, lm2.a1)
 final.lm <- step(lm.a1)
 summary(final.lm)
 
+library(rpart)
 #Don't seen a very good aproach, tho.
 # Let's take a look in tree regression method.
 #Load the data once again, and remove the worst samples 62 and 199.
@@ -175,7 +185,7 @@ rt.prune <- function(tree,se=1,verbose=T,...) {
 		if (verbose && lin.min.err == nrow(tree$cptable))
 			warning("Minimal Cross Validation Error is obtained
 			at the largest tree.\n Further tree growth
-			(achievable through smaller ’cp’ parameter value),\n
+			(achievable through smaller 'cp' parameter value),\n
 			could produce more accurate tree.\n")
 		tol.err <- tree$cptable[lin.min.err,4] + se * tree$cptable[lin.min.err,5]
 		se.lin <- which(tree$cptable[,4] <= tol.err)[1]
@@ -187,4 +197,90 @@ rt.prune <- function(tree,se=1,verbose=T,...) {
 first.tree <- rpart(a1 ~ .,data=algae[,1:12])
 plot(first.tree)
 text(first.tree)
+
+#Let's set predict()
+lm.predictions.a1 <- predict(final.lm,algae)
+rt.predictions.a1 <- predict(rt.a1,algae)
+
+#MAE (mean absolute error) of lm.a1 and rt.a1
+(mae.a1.lm <- mean(abs(lm.predictions.a1-algae[,'a1'])))
+(mae.a1.rt <- mean(abs(rt.predictions.a1-algae[,'a1'])))
+
+#MSE (mean squared error) of lm.a1 and rt.a1
+(mse.a1.lm <- mean((lm.predictions.a1-algae[,'a1'])^2))
+(mse.a1.rt <- mean((rt.predictions.a1-algae[,'a1'])^2))
+
+#Well... all I can say is that numbers exists. What's the meaning, after all?
+#Let's calculate de NMSE (Normalized Mean Squared Error)
+#"This statistic calculates a ratio between the per formance of our models 
+#and that of a baseline predictor, usually taken as the mean value of the target variable"
+#"The NMSE is a unit-less error measure with values usually ranging from 0
+#to 1. If your model is performing better than this very simple baseline predictor
+#then the NMSE should be clearly below 1. The smaller the NMSE, the better.
+#Values above 1 mean that your model is performing worse than simply predicting
+#always the average for all cases!" - Torgo, Luis, "Data Mining with R: learning by case studies".
+
+(nmse.a1.lm <- mean((lm.predictions.a1-algae[,'a1'])^2)/mean((mean(algae[,'a1'])-algae[,'a1'])^2))
+(nmse.a1.rt <- mean((rt.predictions.a1-algae[,'a1'])^2)/mean((mean(algae[,'a1'])-algae[,'a1'])^2))
+
+#Seens like we are going the right way. Let's take a real look.
+old.par <- par(mfrow=c(2,1))
+plot(lm.predictions.a1,algae[,'a1'],main="Linear Model",
+	xlab="Predictions",ylab="True Values")
+	abline(0,1,lty=2)
+
+plot(rt.predictions.a1,algae[,'a1'],main="Regression Tree",
+	xlab="Predictions",ylab="True Values")
+	abline(0,1,lty=2)
+	par(old.par)
+
+plot(lm.predictions.a1,algae[,'a1'],main="Linear Model",
+	xlab="Predictions",ylab="True Values")
+abline(0,1,lty=2)
+algae[identify(lm.predictions.a1,algae[,'a1']),]
+
+
+#Negative values? Get rid of then.
+sensible.lm.predictions.a1 <- ifelse(lm.predictions.a1 < 0, 0, lm.predictions.a1)
+
+(mae.a1.lm <- mean(abs(sensible.lm.predictions.a1-algae[,'a1'])))
+(nmse.a1.lm <- mean((sensible.lm.predictions.a1-algae[,'a1'])^2)/mean((mean(algae[,'a1'])-algae[,'a1'])^2))
+
+#K-Fold cross validation
+cross.validation <- function(all.data,clean.data,n.folds=10) {
+	n <- nrow(all.data)
+	idx <- sample(n,n)
+	all.data <- all.data[idx,]
+	clean.data <- clean.data[idx,]
+	n.each.part <- n %/% n.folds
+	perf.lm <- vector()
+	perf.rt <- vector()
+	for(i in 1:n.folds) {
+		cat('Fold ',i,'\n')
+		out.fold <- ((i-1)*n.each.part+1):(i*n.each.part)
+		l.model <- lm(a1 ~ .,clean.data[-out.fold,1:12])
+		l.model <- step(l.model)
+		l.model.preds <- predict(l.model,clean.data[out.fold,1:12])
+		l.model.preds <- ifelse(l.model.preds < 0,0,l.model.preds)
+		r.model <- reliable.rpart(a1 ~ .,all.data[-out.fold,1:12])
+		r.model.preds <- predict(r.model,all.data[out.fold,1:12])
+		perf.lm[i] <- mean((l.model.preds-all.data[out.fold,'a1'])^2) /mean((mean(all.data[-out.fold,'a1'])-all.data[out.fold,'a1'])^2)
+		perf.rt[i] <- mean((r.model.preds-all.data[out.fold,'a1'])^2) /mean((mean(all.data[-out.fold,'a1'])-all.data[out.fold,'a1'])^2)
+	}
+	list(lm=list(avg=mean(perf.lm),std=sd(perf.lm),fold.res=perf.lm),
+		rt=list(avg=mean(perf.rt),std=sd(perf.rt),fold.res=perf.rt))
+}
+
+
+algae.dirty <- read.table('./data/Analysis.txt',
+	header=FALSE,
+	dec='.',
+	col.names=c('season','size','speed','mxPH','mnO2','Cl',
+	'NO3','NH4','oPO4','PO4','Chla','a1','a2','a3','a4',
+	'a5','a6','a7'),
+	na.strings=c('XXXXXXX'));
+cv10.res <- cross.validation(algae.dirty, algae)
+cv10.res
+
+wilcox.test(cv10.res$lm$fold.res,cv10.res$rt$fold.res,paired=T)
 
