@@ -1,6 +1,6 @@
 #Resumo:
 #Parte 1: modulo de Young:
-#Calculo final: 16.1 10^10 Pa +- 0.3 10^10 Pa
+#Calculo final: 16.2 10^10 Pa (por coef. angular) +- 0.3 10^10 Pa (por P e x)
 #Material mais próximo, segundo a tabela da apostila: Aco
 
 #Constantes adotadas
@@ -38,6 +38,7 @@ UnsureYoung <- function(F, L, d, b, x, dF, dL, dd, db, dx){
 
 AngularCoef <- function(x0, x1, y0, y1) (y1 - y0)/(x1 - x0)
 YoungModulus <- function(F, L, d, b, x) (F * 4.0 * (L^3))/((d^3) * b * x)
+YoungModulusByCoef <- function(m, L, d, b) (m * 4.0 * (L^3))/((d^3) * b)
 AngularCoefByYoung <- function(E, d, b, L) (E*(d^3)*b)/(4.0*(L^3))
 Equivalency <- function(x1, x2, y1, y2) abs(x1 - x2) < (2*(y1 + y2))
 
@@ -58,8 +59,13 @@ x <- (DeslocamentoReguaLFixoPVar - MedidaInicialDaProveta) * 10^(-2)
 L <- LInicial * 10^(-2)
 b <- mean(BarraLargura) * 10^(-3)
 d <- mean(BarraEspessura) * 10^(-3)
-m <- AngularCoef(0.55, 3.76, 0.8, 5.4)
-YModulus <- YoungModulus(F, L, d, b, x)
+m <- AngularCoef(0.8/10^2, 5.4/10^2, 0.55, 3.76)
+
+#Modulo de Young atraves de coeficiente angular
+YModulus2 <- YoungModulusByCoef(m, L, d, b) 
+
+#Modulo de Young atraves de Peso e Deslocamento
+YModulus <- YoungModulus(F, L, d, b, x) 
 
 #Concreto foi desconsiderado, por nao ter o modulo de Young 
 #expresso na dada tabela da apostila
@@ -67,7 +73,7 @@ TabelaComparacaoYoung <- data.frame(c(7.0, 11.0, 9.0, 20.0, 21.0, 1.6, 6.0))
 rownames(TabelaComparacaoYoung) = c("Aluminio", "Cobre", 
 	"Bronze", "Aco", "Ferro", "Chumbo", "Vidro Crown")
 TabelaComparacaoYoung[2] <- round(abs(TabelaComparacaoYoung[[1]] 
-	- mean(YModulus)/10^10), 1)
+	- mean(YModulus2)/10^10), 1)
 
 colnames(TabelaComparacaoYoung) = c("Modulo de Young (10^10 Pa)", 
 	"Diferença absoluta (10^10 Pa)")
@@ -76,11 +82,11 @@ TabelaComparacaoYoung[order(-TabelaComparacaoYoung[,2],
 
 b <- median(BarraLargura) * 10^(-3)
 d <- median(BarraEspessura) * 10^(-3)
-YModulus <- YoungModulus(F, L, d, b, x)
+YModulus2 <- YoungModulusByCoef(m, L, d, b)
 colnames(TabelaComparacaoYoung) = c("Modulo de Young (10^10 Pa)", 
 	"Diferença absoluta (10^10 Pa)")
 TabelaComparacaoYoung[2] <- round(abs(TabelaComparacaoYoung[[1]] 
-	- mean(YModulus)/10^10), 1)
+	- mean(YModulus2)/10^10), 1)
 
 TabelaComparacaoYoung[order(-TabelaComparacaoYoung[,2], 
 	TabelaComparacaoYoung[, 1], decreasing=TRUE),]
@@ -118,4 +124,3 @@ arrows(TabelaLVariavel[[3]], TabelaLVariavel[[2]]-0.1,
 
 #Calcular o coef angular, fazer os gráficos em papel e 
 #Calcular o módulo de young E.
-
