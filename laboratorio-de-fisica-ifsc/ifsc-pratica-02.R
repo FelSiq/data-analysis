@@ -9,7 +9,7 @@
 #Constantes adotadas
 ImprecisaoMicrometro <- 0.01	#em mm
 ImprecisaoPaquimetro <- 0.05	#em mm
-ImprecisaoBalanca <- 0.1		#em g
+ImprecisaoBalanca <- 0.01		#em g
 ImprecisaoProveta <- 0.1		#em cm
 ImprecisaoRegua	<- 0.1			#em cm
 Gravidade <- 9.81				#em m.s^-2
@@ -18,18 +18,18 @@ Gravidade <- 9.81				#em m.s^-2
 BarraEspessura <- c(1.00, 1.10, 1.10) #em mm, com o micrômetro
 BarraLargura <- c(25.50, 25.55, 25.45) #em mm, com o paquímetro
 
-MassaObjetosMetalicos <- c(56.50, 109.7, 160.7, 209.4, 
-	255.9, 294.3, 341.1, 383.6)	#em g
+MassaObjetosMetalicos <- c(56.59, 109.60, 160.55, 209.34, 
+	256.14, 299.29, 342.60, 385.54)	#em g
 
 MedidaInicialDaProveta <- 5.0 #em cm
-DeslocamentoReguaLFixoPVar <- c(5.8, 6.5, 7.3, 8.0, 8.7,
-	9.1, 9.8, 10.4)	#em cm
+DeslocamentoReguaLFixoPVar <- c(5.9, 6.6, 7.4, 8.1, 8.7,
+	9.4, 10.0, 10.6)	#em cm
 
 LInicial <- 27.0 #L inicial da régua p/ medições de deformação com 
 #L variável, em cm
 LVariacao <- 3.0 #Variamos o L de aproximadamente 3.0 em 3.0 cm
-MedidaInicialDaProvetaVar <- c(5.0, 4.8, 4.7, 4.7, 4.6, 4.5, 4.5, 4.4, 4.4) #em cm
-DeslocamentoReguaLVarPFixo <- c(10.4, 8.6, 7.2, 6.2, 5.4, 4.9, 4.6, 4.4, 4.4)	#em cm
+MedidaInicialDaProvetaVar <- c(5.0, 4.8, 4.7, 4.6, 4.5, 4.5, 4.5, 4.5, 4.5) #em cm
+DeslocamentoReguaLVarPFixo <- c(10.5, 8.7, 7.4, 6.3, 5.5, 5.0, 4.7, 4.6, 4.5)	#em cm
 
 #Formulas
 UnsureYoung <- function(F, L, d, b, x, dF, dL, dd, db, dx){
@@ -63,8 +63,12 @@ TabelaPesoXDeformacao #Imprime a tabela
 plot(TabelaPesoXDeformacao[[2]], TabelaPesoXDeformacao[[1]],
 	xlab = "Deformação (cm) +- 0.1cm", 
 	ylab = "Peso (N) +- 9.8*10^(-4)N") #Plota a tabela (evidencia relação linear entre as grandezas)
-abline(0, AngularCoef(0.8, 5.4, 0.55, 3.76), col="blue") 
-title("Gráfico 1 - Relação linear entre Peso (N) e a Deformação (cm) da barra de metal")
+abline(-0.05, AngularCoef(TabelaPesoXDeformacao[1, 2], 
+	TabelaPesoXDeformacao[7, 2],  
+	TabelaPesoXDeformacao[1, 1], 
+	TabelaPesoXDeformacao[7, 1]), col="blue") 
+#abline(0, AngularCoef(0.8, 5.4, 0.55, 3.76), col="blue") 
+title("Gráfico 1 - Relação linear entre Peso (N)\ne a Deformação (cm) da barra de metal")
 
 #Parâmetros para o cálculo do Modulo de Young
 F <- PesoObjeto
@@ -134,29 +138,34 @@ colnames(TabelaLVariavel) = c("L (cm +- 0.1cm)",
 TabelaLVariavel
 plot(TabelaLVariavel)
 
+png("newpngYoung2.png")
 plot(TabelaLVariavel[[2]], TabelaLVariavel[[3]], 
-	type = 'b', ylab = "L^3 (m +- 10^-5m)", xlab = "x (cm +-0.1cm)")
+	type = 'p', ylab = "L^3 (m^3 +- 10^(-5)m^3)", xlab = "x (cm +-0.1cm)")
 title("Gráfico 2: Relação entre L^3 (m) e x (cm)")
 arrows(TabelaLVariavel[[2]], TabelaLVariavel[[3]]-0.1, 
 	TabelaLVariavel[[2]], TabelaLVariavel[[3]]+0.1, 
 	length=0.05, angle=90, code=3)
+abline(0, AngularCoef(TabelaLVariavel[[1,2]], TabelaLVariavel[[7,2]], TabelaLVariavel[[1,3]], TabelaLVariavel[[7,3]]))
+dev.off()
 #Comprova a relacao linear entre L^3 e x 
 
 #Relacao linear entre L e x em escala log-log? 
-plot(log10(TabelaLVariavel[[2]] + 10), log10(TabelaLVariavel[[1]] + 10))
+plot(log10(TabelaLVariavel[[2]]), log10(TabelaLVariavel[[1]]))
 #Dados negativos comprometeram a representacao
 m2 <- AngularCoef(log10(TabelaLVariavel[[2,1]]),
-	log10(TabelaLVariavel[[3,1]]),
-	log10(TabelaLVariavel[[2,3]]),
-	log10(TabelaLVariavel[[3,3]]))
+	log10(TabelaLVariavel[[1,1]]),
+	log10(TabelaLVariavel[[2,9]]),
+	log10(TabelaLVariavel[[1,9]]))
 
-plot(log10(TabelaLVariavel[[2]]), log10(TabelaLVariavel[[3]]), 
-	ylim = c(0.0, 3.0), xlim = c(-1.0, 1.0),
-	ylab = "log(L) (cm +- 0.1cm)", xlab = "x (cm +-0.1cm)")
-title("Gráfico 3: log(L) (m) e log(x) (cm)")
-arrows(log10(TabelaLVariavel[[2]]), log10(TabelaLVariavel[[3]])-0.1, 
-	log10(TabelaLVariavel[[2]]), log10(TabelaLVariavel[[3]])+0.1, 
+png("newplotYoung.png")
+plot(log10(TabelaLVariavel[[2]]*10)), log10(TabelaLVariavel[[1]]*10)), 
+	ylim = c(1.0, 3.0), xlim = c(0.0, 2.0),
+	ylab = "L (mm +- 1.0mm)", xlab = "x (mm +- 1.0mm)")
+title("Gráfico 3: L (mm) e x (mm)")
+arrows(TabelaLVariavel[[2]]*10, TabelaLVariavel[[1]]*10 -0.1, 
+	TabelaLVariavel[[2]]*10, TabelaLVariavel[[1]]*10 +0.1, 
 	length=0.05, angle=90, code=3)
+dev.off()
 
 m3 <- AngularCoef(TabelaLVariavel[4, 2], 
 	TabelaLVariavel[1, 2],
@@ -176,3 +185,5 @@ TabelaComparacaoYoung[3] <- round(abs(YModulus3 -
 	TabelaComparacaoYoung[[1]]), 1)
 TabelaComparacaoYoung[order(-TabelaComparacaoYoung[,2], 
 	TabelaComparacaoYoung[, 1], decreasing=TRUE),]
+
+#Fim do experimento.
